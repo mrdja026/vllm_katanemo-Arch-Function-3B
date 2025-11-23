@@ -63,11 +63,28 @@ nvidia-smi
 
 ## 🧩 Running the Chat
 
-Run the all-in-one script:
+Run the analysis server (REST + vLLM launcher):
 
 ```bash
 python quant_arch_function_3b.py
 ```
+
+Environment knobs:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SERVICE_PORT` | 8100 | Port for the FastAPI server exposing `/analyze` + `/health`. |
+| `VLLM_MODEL_ID` | katanemo/Arch-Function-3B | HF model served through vLLM. |
+| `AUTO_START_VLLM` | true | Launch `vllm serve …` automatically. Set `false` if you manage vLLM separately. |
+| `STATUS_WEBHOOK_URL` | _(unset)_ | Optional webhook notified with `vllm_started` / `vllm_completed`. |
+| `VLLM_POST_PROCESSING_URL` | _(external)_ | Point the nanoGPT API at `http://<host>:8100/analyze` so it can dispatch completed chats. |
+
+When `/analyze` receives a request, it:
+
+1. Notifies `STATUS_WEBHOOK_URL` (if configured) that vLLM work started.
+2. Uses vLLM to judge whether the prompt is **fantasy-photography** related. If not, it returns `{"status":"rejected"}` with the polite refusal.
+3. Builds a ranking prompt with all six expert responses, asks vLLM for the best role + rationale, and returns structured JSON including a 10-sentence chain of thought.
+4. Sends a `vllm_completed` webhook containing the final payload so the Node gateway/UI can surface the result asynchronously.
 
 ### What happens
 
@@ -140,6 +157,11 @@ curl http://localhost:8000/v1/completions \
   -d '{"model":"katanemo/Arch-Function-3B","prompt":"Hello!","max_tokens":50}'
 ```
 
+**Guardrail reminder:** `/analyze` rejects prompts unless they clearly describe photography in a fantasy setting. Make sure the payload (prompt or raw multi response) contains that context, or adjust `is_photography_prompt()` if needed.
+
+- TODO
+- [ ] - Check the other repo test_vllm_post_processing.sh for testing 
+
 ---
 
 ## 🧹 Shutdown
@@ -161,3 +183,7 @@ Refer to [katanemo/Arch-Function-3B on Hugging Face](https://huggingface.co/kata
 * [vLLM Team](https://github.com/vllm-project/vllm) for the inference engine
 * [Katanemo AI](https://huggingface.co/katanemo) for Arch-Function-3B
 * Script & docs adapted by @ Mrdjan Stajić 2025
+
+
+
+
