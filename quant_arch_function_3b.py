@@ -9,6 +9,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import time
 from typing import List, Optional
 
@@ -74,8 +75,9 @@ def start_vllm_server() -> Optional[subprocess.Popen]:
     if not AUTO_START_VLLM:
         logger.info("AUTO_START_VLLM disabled; assuming server already running")
         return None
+    vllm_bin = os.path.join(os.path.dirname(sys.executable), "vllm")
     cmd = [
-        "vllm",
+        vllm_bin,
         "serve",
         MODEL_ID,
         "--port",
@@ -88,7 +90,11 @@ def start_vllm_server() -> Optional[subprocess.Popen]:
         "0.85",
     ]
     logger.info("Launching vLLM: %s", " ".join(cmd))
-    proc = subprocess.Popen(cmd)
+    env = os.environ.copy()
+    env.setdefault("TORCH_COMPILE_DISABLE", "1")
+    env.setdefault("TORCHINDUCTOR_DISABLE", "1")
+    env.setdefault("VLLM_DISABLE_TORCH_COMPILE", "1")
+    proc = subprocess.Popen(cmd, env=env)
     time.sleep(VLLM_WARMUP_SECONDS)
     return proc
 

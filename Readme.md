@@ -17,6 +17,38 @@ This setup runs the **full-precision FP16 model** (≈ 15 – 16 GB VRAM) on you
 
 ---
 
+## ⚠️ POC Disclaimer
+
+This project is a proof-of-concept for running `katanemo/Arch-Function-3B` locally with vLLM, plus a minimal Streamlit UI and a REST analyzer. It is intended for local experiments, rapid iteration, and evaluating prompt behavior. It is not a production-ready system.
+
+### What can go wrong (and why)
+
+The current setup has known limitations that can impact correctness and UX:
+
+1. **Limited domain knowledge**
+   - The model can be generic, shallow, or inconsistent outside its training biases. Some outputs may feel "lost" or vague.
+
+2. **No tool calling or grounding**
+   - The model cannot look things up, execute tools, or verify facts. Answers are unverified, which is risky for accuracy-heavy requests.
+
+3. **Guardrail mismatch**
+   - The `/analyze` endpoint rejects prompts unless they are clearly fantasy-photography. Many valid requests will be refused unless you adapt `is_photography_prompt()`.
+
+4. **Strict JSON parsing**
+   - The analysis flow expects JSON-only model responses. If the model returns malformed JSON, `/analyze` will fail with a 502.
+
+5. **Heavy GPU footprint**
+   - FP16 serving needs ~15–16 GB VRAM. Background services + Streamlit can add overhead and reduce headroom.
+
+6. **Latency and warmup**
+   - vLLM startup and first-token latency are non-trivial, especially on WSL2; expect slow first responses.
+
+### Tradeoffs
+
+- **Simplicity over robustness**: Single-script launch and minimal UI keep the POC easy to run, but error handling and resilience are limited.
+- **Local-only over hosted**: No external dependencies make this safe to test, but it offers no multi-user support or scaling.
+- **Minimal prompting over strong guarantees**: Lightweight prompts are easy to tweak, but do not enforce safety, determinism, or JSON validity.
+
 ## 📦 Prerequisites
 
 | Requirement     | Minimum                                      |
@@ -161,7 +193,7 @@ curl http://localhost:8000/v1/completions \
 
 - TODO
 - [ ] - Check the other repo test_vllm_post_processing.sh for testing 
-
+- [ ] - Check @Todo.md for post mvp
 ---
 
 ## 🧹 Shutdown
@@ -183,7 +215,6 @@ Refer to [katanemo/Arch-Function-3B on Hugging Face](https://huggingface.co/kata
 * [vLLM Team](https://github.com/vllm-project/vllm) for the inference engine
 * [Katanemo AI](https://huggingface.co/katanemo) for Arch-Function-3B
 * Script & docs adapted by @ Mrdjan Stajić 2025
-
 
 
 
